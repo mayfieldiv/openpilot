@@ -117,7 +117,7 @@ int main(int argc, char **argv) {
 #if defined(QCOM) || defined(QCOM2)
   cl_device_type device_type = CL_DEVICE_TYPE_DEFAULT;
 #else
-  cl_device_type device_type = CL_DEVICE_TYPE_CPU;
+  cl_device_type device_type = CL_DEVICE_TYPE_ALL;
 #endif
 
   // cl init
