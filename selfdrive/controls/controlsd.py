@@ -53,7 +53,8 @@ class Controls:
     self.sm = sm
     if self.sm is None:
       self.sm = messaging.SubMaster(['thermal', 'health', 'model', 'liveCalibration', 'frontFrame',
-                                     'dMonitoringState', 'plan', 'pathPlan', 'liveLocationKalman'])
+                                     'dMonitoringState', 'plan', 'pathPlan', 'liveLocationKalman'],
+                                     ignore_alive=['frontFrame'] if SIMULATION else None)
 
     self.can_sock = can_sock
     if can_sock is None:
