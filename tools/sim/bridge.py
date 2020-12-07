@@ -237,6 +237,8 @@ def go(q):
     if not q.empty():
       message = q.get()
       m = message.split('_')
+      if m[0] == "reset":
+        vehicle.set_transform(spawn_point)
       if m[0] == "steer":
         steer_manual = float(m[1])
         is_openpilot_engaged = False
