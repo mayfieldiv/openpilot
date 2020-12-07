@@ -187,6 +187,7 @@ int main(int argc, char **argv) {
         mt1 = millis_since_boot();
 
         // TODO: don't make copies!
+        visionbuf_sync(&yuv_ion, VISIONBUF_SYNC_TO_DEVICE);
         memcpy(yuv_ion.addr, buf->addr, buf_info.buf_len);
 
         ModelDataRaw model_buf =
