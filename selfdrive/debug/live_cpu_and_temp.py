@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import argparse
+import os
 
 import numpy as np
 
@@ -36,10 +37,11 @@ if __name__ == "__main__":
 
   sm = SubMaster(['thermal', 'procLog'])
 
+  CPU_COUNT = os.cpu_count()
   last_temp = 0.0
   last_mem = 0.0
-  total_times = [0., 0., 0., 0.]
-  busy_times = [0., 0., 0.0, 0.]
+  total_times = [0.] * CPU_COUNT
+  busy_times = [0.] * CPU_COUNT
 
   prev_proclog = None
   prev_proclog_t = None
@@ -55,16 +57,16 @@ if __name__ == "__main__":
     if sm.updated['procLog']:
       m = sm['procLog']
 
-      cores = [0., 0., 0., 0.]
-      total_times_new = [0., 0., 0., 0.]
-      busy_times_new = [0., 0., 0.0, 0.]
+      cores = [0.] * CPU_COUNT
+      total_times_new = [0.] * CPU_COUNT
+      busy_times_new = [0.] * CPU_COUNT
 
       for c in m.cpuTimes:
         n = c.cpuNum
         total_times_new[n] = cputime_total(c)
         busy_times_new[n] = cputime_busy(c)
 
-      for n in range(4):
+      for n in range(CPU_COUNT):
         t_busy = busy_times_new[n] - busy_times[n]
         t_total = total_times_new[n] - total_times[n]
         cores[n] = t_busy / t_total
