@@ -221,13 +221,47 @@ static void ui_draw_vision_maxspeed(UIState *s) {
   ui_draw_rect(s->vg, rect, COLOR_WHITE_ALPHA(100), 10, 20.);
 
   nvgTextAlign(s->vg, NVG_ALIGN_CENTER | NVG_ALIGN_BASELINE);
-  ui_draw_text(s, rect.centerX(), 148, "MAX", 26 * 2.5, COLOR_WHITE_ALPHA(is_cruise_set ? 200 : 100), "sans-regular");
+  ui_draw_text(s, rect.centerX(), 148, "SET", 26 * 2.5, COLOR_WHITE_ALPHA(is_cruise_set ? 200 : 100), "sans-regular");
   if (is_cruise_set) {
     const std::string maxspeed_str = std::to_string((int)std::nearbyint(maxspeed));
     ui_draw_text(s, rect.centerX(), 242, maxspeed_str.c_str(), 48 * 2.5, COLOR_WHITE, "sans-bold");
   } else {
     ui_draw_text(s, rect.centerX(), 242, "N/A", 42 * 2.5, COLOR_WHITE_ALPHA(100), "sans-semibold");
   }
+}
+
+static void ui_draw_vision_speed_limit(UIState *s) {
+  if (!s->scene.live_map_data.getSpeedLimitValid()) {
+    return;
+  }
+
+  char speedlimit_str[32];
+  float speedlimit = s->scene.live_map_data.getSpeedLimit();
+  int speedlimit_calc = speedlimit * 0.6225 + 0.5;
+  if (s->is_metric) {
+    speedlimit_calc = speedlimit + 0.5;
+  }
+
+  int viz_speedlimit_w = 184;
+  int viz_speedlimit_h = 202;
+  int viz_speedlimit_x = s->scene.viz_rect.x + (bdr_s*9);
+  int viz_speedlimit_y = s->scene.viz_rect.y + (bdr_s*1.5);
+
+  // background
+  ui_draw_rect(s->vg, viz_speedlimit_x, viz_speedlimit_y, viz_speedlimit_w, viz_speedlimit_h, COLOR_BLACK_ALPHA(100), 30);
+
+  // border
+  ui_draw_rect(s->vg, viz_speedlimit_x, viz_speedlimit_y, viz_speedlimit_w, viz_speedlimit_h, COLOR_WHITE_ALPHA(100), 20, 10);
+
+  // title
+  nvgTextAlign(s->vg, NVG_ALIGN_CENTER | NVG_ALIGN_BASELINE);
+  const int text_x = viz_speedlimit_x + (viz_speedlimit_w / 2);
+  ui_draw_text(s->vg, text_x, 125, "SPEED", 18 * 2.5, COLOR_WHITE_ALPHA(255), s->font_sans_semibold);
+  ui_draw_text(s->vg, text_x, 160, "LIMIT", 18 * 2.5, COLOR_WHITE_ALPHA(255), s->font_sans_semibold);
+
+  // value
+  snprintf(speedlimit_str, sizeof(speedlimit_str), "%d", speedlimit_calc);
+  ui_draw_text(s->vg, text_x, 242, speedlimit_str, 48 * 2.5, COLOR_WHITE, s->font_sans_bold);
 }
 
 static void ui_draw_vision_speed(UIState *s) {
@@ -309,6 +343,7 @@ static void ui_draw_vision_header(UIState *s) {
   ui_fill_rect(s->vg, {s->viz_rect.x, s->viz_rect.y, s->viz_rect.w, header_h}, gradient);
 
   ui_draw_vision_maxspeed(s);
+  ui_draw_vision_speed_limit(s);
   ui_draw_vision_speed(s);
   ui_draw_vision_event(s);
 }

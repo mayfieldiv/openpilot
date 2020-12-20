@@ -42,7 +42,7 @@ static void ui_init_vision(UIState *s) {
 
 void ui_init(UIState *s) {
   s->sm = new SubMaster({"modelV2", "controlsState", "uiLayoutState", "liveCalibration", "radarState", "deviceState", "roadCameraState", "liveLocationKalman",
-                         "pandaState", "carParams", "driverState", "driverMonitoringState", "sensorEvents", "carState", "ubloxGnss"});
+                         "pandaState", "carParams", "driverState", "driverMonitoringState", "sensorEvents", "carState", "ubloxGnss", "liveMapData"});
 
   s->started = false;
   s->status = STATUS_OFFROAD;
@@ -205,6 +205,10 @@ static void update_sockets(UIState *s) {
       }
     }
   }
+  if (sm.updated("liveMapData")) {
+    scene.live_map_data = sm["liveMapData"].getLiveMapData();
+  }
+
   s->started = scene.deviceState.getStarted() || scene.frontview;
 }
 
