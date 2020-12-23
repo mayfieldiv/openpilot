@@ -27,7 +27,8 @@ def try_fetch_speed_limit(gps_entries):
   try:
     access_token = get_mapbox_access_token()
     if access_token is None:
-      cloudlog.info("Mapbox access token not found:", MAPBOX_ACCESS_TOKEN_PATH)
+      print("Mapbox access token not found: %s" % MAPBOX_ACCESS_TOKEN_PATH)
+      cloudlog.info("Mapbox access token not found: %s", MAPBOX_ACCESS_TOKEN_PATH)
       return None
     data = {
       'coordinates': ';'.join(f"{x.longitude},{x.latitude}" for x in gps_entries),
@@ -49,7 +50,8 @@ def try_fetch_speed_limit(gps_entries):
       elif maxspeed['unit'] == 'mph':
         return maxspeed['speed'] * CV.MPH_TO_KPH
   except Exception as e:
-    cloudlog.info('Unable to retrieve speed limit from %s:' % json, e)
+    print('Unable to retrieve speed limit from %s: %s' % (json, e))
+    cloudlog.info('Unable to retrieve speed limit from %s: %s', json, e)
 
   return None
 
