@@ -26,7 +26,7 @@ int write_param_float(float param, const char* param_name, bool persistent_param
 
 void ui_init(UIState *s) {
   s->sm = new SubMaster({"modelV2", "controlsState", "uiLayoutState", "liveCalibration", "radarState", "thermal", "frame",
-                         "health", "carParams", "ubloxGnss", "driverState", "dMonitoringState", "sensorEvents", "liveMapData"});
+                         "health", "carParams", "ubloxGnss", "driverState", "dMonitoringState", "sensorEvents", "gpsPlannerPoints"});
 
   s->started = false;
   s->status = STATUS_OFFROAD;
@@ -236,8 +236,9 @@ void update_sockets(UIState *s) {
       }
     }
   }
-  if (sm.updated("liveMapData")) {
-    scene.live_map_data = sm["liveMapData"].getLiveMapData();
+  if (sm.updated("gpsPlannerPoints")) {
+    scene.gps_planner_points = sm["gpsPlannerPoints"].getGpsPlannerPoints();
+    scene.track_name = scene.gps_planner_points.getTrackName();
   }
 
   s->started = scene.thermal.getStarted() || scene.frontview;
