@@ -234,6 +234,7 @@ void update_sockets(UIState *s) {
     }
   }
   if (sm.updated("gpsPlannerPoints")) {
+    scene.gps_planner_points_timestamp = sm["gpsPlannerPoints"].getLogMonoTime();
     scene.gps_planner_points = sm["gpsPlannerPoints"].getGpsPlannerPoints();
     scene.track_name = scene.gps_planner_points.getTrackName();
   }

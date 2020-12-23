@@ -4,6 +4,7 @@
 #include <map>
 #include <cmath>
 #include <iostream>
+#include "common/timing.h"
 #include "common/util.h"
 #include <algorithm>
 
@@ -328,6 +329,15 @@ static void ui_draw_vision_maxspeed(UIState *s) {
 }
 
 static void ui_draw_vision_road_info(UIState *s) {
+  // TODO detect socket crash
+  if (nanos_since_boot() - s->scene.gps_planner_points_timestamp > 30e9) {
+    char error_message[64];
+    snprintf(error_message, sizeof(error_message), "ROAD DATA STALE | %lu | %lu", nanos_since_boot(), s->scene.gps_planner_points_timestamp);
+    nvgTextAlign(s->vg, NVG_ALIGN_LEFT | NVG_ALIGN_BASELINE);
+    ui_draw_text(s->vg, s->scene.viz_rect.x + (bdr_s*2), 350, error_message, 20 * 2.5, COLOR_WHITE, s->font_sans_semibold);
+    return;
+  }
+
   if (!s->scene.gps_planner_points.getValid()) {
     return;
   }

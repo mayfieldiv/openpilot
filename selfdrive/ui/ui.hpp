@@ -113,6 +113,7 @@ typedef struct UIScene {
   NetStatus athenaStatus;
 
   std::string track_name;
+  uint64_t gps_planner_points_timestamp;
 
   cereal::ThermalData::Reader thermal;
   cereal::RadarState::LeadData::Reader lead_data[2];
