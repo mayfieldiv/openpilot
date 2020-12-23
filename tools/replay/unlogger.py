@@ -106,9 +106,9 @@ class UnloggerWorker(object):
         s1 = time.time()
         try:
           img = self._frame_reader.get(frame_id, pix_fmt="rgb24")
-        except Exception:
+        except Exception as e:
           img = None
-
+          print("Unable to read image frame %s: %s" % (frame_id, e))
         fr_time = time.time() - s1
         if fr_time > 0.05:
           print("FRAME(%d) LAG -- %.2f ms" % (frame_id, fr_time*1000.0))
