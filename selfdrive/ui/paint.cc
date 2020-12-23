@@ -327,13 +327,24 @@ static void ui_draw_vision_maxspeed(UIState *s) {
   }
 }
 
-static void ui_draw_vision_speed_limit(UIState *s) {
-  if (!s->scene.live_map_data.getSpeedLimitValid()) {
+static void ui_draw_vision_road_info(UIState *s) {
+  if (!s->scene.gps_planner_points.getValid()) {
     return;
   }
 
+  // Road name
+  if (s->scene.track_name.length()) {
+    // TODO: split evenly onto 2 lines if too wide (maybe can split on ',')
+    nvgTextAlign(s->vg, NVG_ALIGN_LEFT | NVG_ALIGN_BASELINE);
+    ui_draw_text(s->vg, s->scene.viz_rect.x + (bdr_s*2), 350, s->scene.track_name.c_str(), 20 * 2.5, COLOR_WHITE, s->font_sans_semibold);
+  }
+
+  // Speed limit
+  float speedlimit = s->scene.gps_planner_points.getSpeedLimit();
+  if (speedlimit <= 0) {
+    return;
+  }
   char speedlimit_str[32];
-  float speedlimit = s->scene.live_map_data.getSpeedLimit();
   int speedlimit_calc = speedlimit * 0.6225 + 0.5;
   if (s->is_metric) {
     speedlimit_calc = speedlimit + 0.5;
@@ -348,13 +359,13 @@ static void ui_draw_vision_speed_limit(UIState *s) {
   ui_draw_rect(s->vg, viz_speedlimit_x, viz_speedlimit_y, viz_speedlimit_w, viz_speedlimit_h, COLOR_BLACK_ALPHA(100), 30);
 
   // border
-  ui_draw_rect(s->vg, viz_speedlimit_x, viz_speedlimit_y, viz_speedlimit_w, viz_speedlimit_h, COLOR_WHITE_ALPHA(100), 20, 10);
+  ui_draw_rect(s->vg, viz_speedlimit_x, viz_speedlimit_y, viz_speedlimit_w, viz_speedlimit_h, COLOR_WHITE, 20, 10);
 
   // title
   nvgTextAlign(s->vg, NVG_ALIGN_CENTER | NVG_ALIGN_BASELINE);
   const int text_x = viz_speedlimit_x + (viz_speedlimit_w / 2);
-  ui_draw_text(s->vg, text_x, 125, "SPEED", 18 * 2.5, COLOR_WHITE_ALPHA(255), s->font_sans_semibold);
-  ui_draw_text(s->vg, text_x, 160, "LIMIT", 18 * 2.5, COLOR_WHITE_ALPHA(255), s->font_sans_semibold);
+  ui_draw_text(s->vg, text_x, 125, "SPEED", 18 * 2.5, COLOR_WHITE, s->font_sans_semibold);
+  ui_draw_text(s->vg, text_x, 160, "LIMIT", 18 * 2.5, COLOR_WHITE, s->font_sans_semibold);
 
   // value
   snprintf(speedlimit_str, sizeof(speedlimit_str), "%d", speedlimit_calc);
@@ -470,7 +481,7 @@ static void ui_draw_vision_header(UIState *s) {
   ui_draw_rect(s->vg, viz_rect.x, viz_rect.y, viz_rect.w, header_h, gradient);
 
   ui_draw_vision_maxspeed(s);
-  ui_draw_vision_speed_limit(s);
+  ui_draw_vision_road_info(s);
   ui_draw_vision_speed(s);
   ui_draw_vision_event(s);
 }
