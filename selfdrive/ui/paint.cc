@@ -237,9 +237,12 @@ static void ui_draw_vision_road_info(UIState *s) {
 
   // Road name
   if (s->scene.track_name.length()) {
-    // TODO: split evenly onto 2 lines if too wide (maybe can split on ',')
-    nvgTextAlign(s->vg, NVG_ALIGN_LEFT | NVG_ALIGN_BASELINE);
-    ui_draw_text(s->vg, s->scene.viz_rect.x + (bdr_s*2), 350, s->scene.track_name.c_str(), 20 * 2.5, COLOR_WHITE, s->font_sans_semibold);
+    // TODO: split evenly onto 2 lines if too wide? (maybe can split on ',')
+    nvgTextAlign(s->vg, NVG_ALIGN_CENTER | NVG_ALIGN_BASELINE);
+    ui_draw_text(s->vg,
+                s->scene.viz_rect.x + s->scene.viz_rect.w / 2,
+                s->scene.viz_rect.y + s->scene.viz_rect.h - 70,
+                s->scene.track_name.c_str(), 32 * 2.5, COLOR_WHITE, s->font_sans_semibold);
   }
 
   // Speed limit
