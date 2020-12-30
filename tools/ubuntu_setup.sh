@@ -46,6 +46,14 @@ sudo apt-get update && sudo apt-get install -y --no-install-recommends \
     qt5-default \
     qtmultimedia5-dev \
     qtwebengine5-dev \
+    qtlocation5-dev \
+    qtpositioning5-dev \
+    qtdeclarative5-dev \
+    libqt5location5-plugin-mapboxgl \
+    qml-module-qtlocation \
+    qml-module-qtpositioning \
+    qml-module-qtquick2 \
+    qml-module-qtquick-window2 \
     screen \
     sudo \
     vim \
