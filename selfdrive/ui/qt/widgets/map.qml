@@ -5,22 +5,31 @@ import QtPositioning 5.9
 Map {
   plugin: Plugin {
     name: "mapboxgl"
-    // DEVELOPMENT
-    // PluginParameter { name: "mapboxgl.access_token"; value: "pk.eyJ1IjoicXRzZGsiLCJhIjoiY2l5azV5MHh5MDAwdTMybzBybjUzZnhxYSJ9.9rfbeqPjX2BusLRDXHCOBA" }
     PluginParameter { name: "mapboxgl.mapping.use_fbo"; value: "false" }
   }
 
   id: map
-  width: 512
-  height: 512
+
+  // TODO: is there a better way to make map text bigger?
+  width: 256
+  height: 256
+  scale: 2.5
+  x: width * (scale-1)
+  y: height * (scale-1)
+  transformOrigin: Item.BottomRight
+
   center: QtPositioning.coordinate()
   zoomLevel: 16
   visible: center.isValid
 
   property variant carPosition: QtPositioning.coordinate()
   property real carBearing: 0;
+  property bool nightMode: true;
 
-  // activeMapType: MapType.CarNavigationMap
+  onSupportedMapTypesChanged: {
+    activeMapType = Array.from(supportedMapTypes)
+      .find(t => t.style === MapType.CarNavigationMap && t.night == nightMode)
+  }
 
   MapQuickItem {
     id: car
@@ -33,9 +42,9 @@ Map {
 
     sourceItem: Image {
       id: icon
-      source: "arrow.svg"
-      width: 60
-      height: 60
+      source: "arrow-" + (map.nightMode ? "night" : "day") + ".svg"
+      width: 60 / map.scale
+      height: 60 / map.scale
     }
   }
 }
