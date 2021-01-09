@@ -1,11 +1,12 @@
 #pragma once
 
 #include <QBasicTimer>
+#include <QFrame>
 #include <QQuickItem>
 #include <QWidget>
 #include "messaging.hpp"
 
-class QtMap : public QWidget {
+class QtMap : public QFrame {
   Q_OBJECT
 
 public:
@@ -19,7 +20,6 @@ private:
   QWidget *map;
   QQuickItem *mapObject;
   QBasicTimer timer;
-  int i = 0;
 
   void updatePosition();
 };

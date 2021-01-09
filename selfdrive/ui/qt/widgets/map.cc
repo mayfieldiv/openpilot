@@ -17,39 +17,31 @@ const std::string mapbox_access_token_path = "/persist/mapbox/access_token";
 const std::string mapbox_access_token_path = util::getenv_default("HOME", "/.comma/persist/mapbox/access_token", "/persist/mapbox/access_token");
 #endif
 
-QtMap::QtMap(QWidget *parent) : QWidget(parent) {
+QtMap::QtMap(QWidget *parent) : QFrame(parent) {
   QStackedLayout* layout = new QStackedLayout();
 
-  // might have to use this method for stacking
+  // might have to use QQuickWidget for proper stacking?
   QQuickWidget *map = new QQuickWidget();
   map->setSource(QUrl::fromLocalFile("qt/widgets/map.qml"));
   mapObject = map->rootObject();
   QSize size = map->size();
-  // QSizeF scaledSize = QSizeF(512, 512);//mapObject->size() * 4.0;
-  QSizeF scaledSize = mapObject->size() * mapObject->scale();
-  // QSize scaledSize = (mapObject->size() * mapObject->scale()).toSize();
-  qDebug() << "size" << size;
-  qDebug() << "scaledSize" << scaledSize;
-  qDebug() << "mapObject->scale()" << mapObject->scale();
 
-  // using this method seems to make other ui drawing break (eg. video is all black)
+  // using QQuickView seems to make other ui drawing break (eg. video is all black) - maybe need resetOpenGLState()?
   // QQuickView *mapView = new QQuickView();
   // mapView->setSource(QUrl::fromLocalFile("qt/widgets/map.qml"));
   // QSize size = mapView->size();
   // map = QWidget::createWindowContainer(mapView, this);
   // mapObject = mapView->rootObject();
+
   // TODO focus stuff needed? https://www.qtdeveloperdays.com/sites/default/files/Adding%20QtQuick%20base%20windows%20to%20an%20existing%20QWidgets%20Application-dark.pdf
   // setFocusProxy(map); // focus container widget when top level widget is focused
   // setFocusPolicy(Qt::NoFocus); // work around QML activation issue
 
-  // map->setFixedSize(scaledSize.toSize());
-  // mapObject->setSize(scaledSize);
-  // setFixedSize(scaledSize.toSize());
+  QSizeF scaledSize = mapObject->size() * mapObject->scale();
+  qDebug() << "size" << size;
+  qDebug() << "scaledSize" << scaledSize;
+  qDebug() << "mapObject->scale()" << mapObject->scale();
   map->setFixedSize(scaledSize.toSize());
-  // mapObject->cale(2.0);
-  // mapObject->setX(256);
-  // mapObject->setY(256);
-  // mapObject->setSize(QSizeF(256, 256));
   setFixedSize(scaledSize.toSize());
 
   layout->addWidget(map);
@@ -64,6 +56,7 @@ QtMap::QtMap(QWidget *parent) : QWidget(parent) {
   QVariantMap parameters;
   parameters["mapboxgl.access_token"] = mapboxAccessToken;
   parameters[QStringLiteral("osm.useragent")] = QStringLiteral("QtLocation Mapviewer example");
+  // TODO pass in mapbox access token
   // QMetaObject::invokeMethod(mapObject, "initializeProviders",
   //                           Q_ARG(QVariant, QVariant::fromValue(parameters)));
 
@@ -78,13 +71,16 @@ void QtMap::timerEvent(QTimerEvent *event) {
   if (!event)
     return;
 
-  if (event->timerId() == timer.timerId())
-    updatePosition();
+  if (event->timerId() == timer.timerId()) {
+    if (isVisible())
+      updatePosition();
+  }
   else
     QObject::timerEvent(event);
 }
 
 void QtMap::updatePosition() {
+  // TODO move these to qml?
   bool mapFollowsCar = true;
   bool lockedToNorth = true;
 
