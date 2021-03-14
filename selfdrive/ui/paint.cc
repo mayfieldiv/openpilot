@@ -239,10 +239,10 @@ static void ui_draw_vision_road_info(UIState *s) {
   if (s->scene.track_name.length()) {
     // TODO: split evenly onto 2 lines if too wide? (maybe can split on ',')
     nvgTextAlign(s->vg, NVG_ALIGN_CENTER | NVG_ALIGN_BASELINE);
-    ui_draw_text(s->vg,
-                s->scene.viz_rect.x + s->scene.viz_rect.w / 2,
-                s->scene.viz_rect.y + s->scene.viz_rect.h - 70,
-                s->scene.track_name.c_str(), 32 * 2.5, COLOR_WHITE, s->font_sans_semibold);
+    ui_draw_text(s,
+                s->viz_rect.centerX(),
+                s->viz_rect.y + s->viz_rect.h - 70,
+                s->scene.track_name.c_str(), 32 * 2.5, COLOR_WHITE, "sans-semibold");
   }
 
   // Speed limit
@@ -250,32 +250,20 @@ static void ui_draw_vision_road_info(UIState *s) {
   if (speedlimit <= 0) {
     return;
   }
-  char speedlimit_str[32];
-  int speedlimit_calc = speedlimit * 0.6225 + 0.5;
-  if (s->is_metric) {
-    speedlimit_calc = speedlimit + 0.5;
+  if (!s->is_metric) {
+    speedlimit *= 0.6225;
   }
 
-  int viz_speedlimit_w = 184;
-  int viz_speedlimit_h = 202;
-  int viz_speedlimit_x = s->scene.viz_rect.x + (bdr_s*9);
-  int viz_speedlimit_y = s->scene.viz_rect.y + (bdr_s*1.5);
+  const Rect rect = {s->viz_rect.x + (bdr_s * 9), int(s->viz_rect.y + (bdr_s * 1.5)), 184, 202};
+  ui_fill_rect(s->vg, rect, COLOR_BLACK_ALPHA(100), 30.);
+  ui_draw_rect(s->vg, rect, COLOR_WHITE_ALPHA(100), 10, 20.);
 
-  // background
-  ui_draw_rect(s->vg, viz_speedlimit_x, viz_speedlimit_y, viz_speedlimit_w, viz_speedlimit_h, COLOR_BLACK_ALPHA(100), 30);
-
-  // border
-  ui_draw_rect(s->vg, viz_speedlimit_x, viz_speedlimit_y, viz_speedlimit_w, viz_speedlimit_h, COLOR_WHITE, 20, 10);
-
-  // title
   nvgTextAlign(s->vg, NVG_ALIGN_CENTER | NVG_ALIGN_BASELINE);
-  const int text_x = viz_speedlimit_x + (viz_speedlimit_w / 2);
-  ui_draw_text(s->vg, text_x, 125, "SPEED", 18 * 2.5, COLOR_WHITE, s->font_sans_semibold);
-  ui_draw_text(s->vg, text_x, 160, "LIMIT", 18 * 2.5, COLOR_WHITE, s->font_sans_semibold);
+  ui_draw_text(s, rect.centerX(), 125, "SPEED", 18 * 2.5, COLOR_WHITE, "sans-semibold");
+  ui_draw_text(s, rect.centerX(), 160, "LIMIT", 18 * 2.5, COLOR_WHITE, "sans-semibold");
 
-  // value
-  snprintf(speedlimit_str, sizeof(speedlimit_str), "%d", speedlimit_calc);
-  ui_draw_text(s->vg, text_x, 242, speedlimit_str, 48 * 2.5, COLOR_WHITE, s->font_sans_bold);
+  const std::string speedlimit_str = std::to_string((int)std::nearbyint(speedlimit));
+  ui_draw_text(s, rect.centerX(), 242, speedlimit_str.c_str(), 48 * 2.5, COLOR_WHITE, "sans-bold");
 }
 
 static void ui_draw_vision_speed(UIState *s) {

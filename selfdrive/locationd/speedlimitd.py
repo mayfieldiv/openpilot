@@ -73,7 +73,7 @@ def main(sm=None, pm=None):
   if sm is None:
     sm = messaging.SubMaster(['gpsLocationExternal'])
   if pm is None:
-    pm = messaging.PubMaster(['gpsPlannerPoints'])
+    pm = messaging.PubMaster(['gpsPlannerPointsDEPRECATED'])
 
   gps_entries = deque(maxlen=10) # the max allowed coordinates in an api call is 100, but we shouldn't need that many
 
@@ -91,19 +91,19 @@ def main(sm=None, pm=None):
 
       gps_entries.append(gps)
 
-      msg = messaging.new_message('gpsPlannerPoints')
+      msg = messaging.new_message('gpsPlannerPointsDEPRECATED')
       msg.logMonoTime = sm.logMonoTime['gpsLocationExternal']
 
       if len(gps_entries) > 2: # min allowed coordinates in an api call
         data = try_fetch_mapbox_data(gps_entries)
         if data is not None:
-          msg.gpsPlannerPoints.valid = True
-          msg.gpsPlannerPoints.trackName = get_track_name(data)
-          msg.gpsPlannerPoints.speedLimit = get_speed_limit(data)
+          msg.gpsPlannerPointsDEPRECATED.valid = True
+          msg.gpsPlannerPointsDEPRECATED.trackName = get_track_name(data)
+          msg.gpsPlannerPointsDEPRECATED.speedLimit = get_speed_limit(data)
         else:
           gps_entries.clear()
 
-      pm.send('gpsPlannerPoints', msg)
+      pm.send('gpsPlannerPointsDEPRECATED', msg)
 
 
 if __name__ == "__main__":
