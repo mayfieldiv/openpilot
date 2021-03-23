@@ -50,6 +50,7 @@ void ui_init(UIState *s) {
   s->sm = new SubMaster({
     "modelV2", "controlsState", "liveCalibration", "radarState", "deviceState", "liveLocationKalman",
     "pandaState", "carParams", "driverState", "driverMonitoringState", "sensorEvents", "carState", "ubloxGnss",
+    "gpsPlannerPointsDEPRECATED",
 #ifdef QCOM2
     "roadCameraState",
 #endif
@@ -236,6 +237,12 @@ static void update_state(UIState *s) {
     scene.light_sensor = std::clamp<float>((1023.0 / 1757.0) * (1757.0 - camera_state.getIntegLines()) * (1.0 - gain), 0.0, 1023.0);
   }
 #endif
+
+  if (sm.updated("gpsPlannerPointsDEPRECATED")) {
+    scene.gps_planner_points = sm["gpsPlannerPointsDEPRECATED"].getGpsPlannerPointsDEPRECATED();
+    scene.track_name = scene.gps_planner_points.getTrackName();
+  }
+
   scene.started = scene.deviceState.getStarted() || scene.driver_view;
 }
 
