@@ -50,7 +50,7 @@ void ui_init(UIState *s) {
   s->sm = new SubMaster({
     "modelV2", "controlsState", "liveCalibration", "radarState", "deviceState", "liveLocationKalman",
     "pandaState", "carParams", "driverState", "driverMonitoringState", "sensorEvents", "carState", "ubloxGnss",
-    "gpsPlannerPointsDEPRECATED",
+    // "gpsPlannerPointsDEPRECATED",
 #ifdef QCOM2
     "roadCameraState",
 #endif
@@ -238,10 +238,10 @@ static void update_state(UIState *s) {
   }
 #endif
 
-  if (sm.updated("gpsPlannerPointsDEPRECATED")) {
-    scene.gps_planner_points = sm["gpsPlannerPointsDEPRECATED"].getGpsPlannerPointsDEPRECATED();
-    scene.track_name = scene.gps_planner_points.getTrackName();
-  }
+  // if (sm.updated("gpsPlannerPointsDEPRECATED")) {
+  //   scene.gps_planner_points = sm["gpsPlannerPointsDEPRECATED"].getGpsPlannerPointsDEPRECATED();
+  //   scene.track_name = scene.gps_planner_points.getTrackName();
+  // }
 
   scene.started = scene.deviceState.getStarted() || scene.driver_view;
 }
