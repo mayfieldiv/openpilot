@@ -8,6 +8,7 @@ Item {
   width: 640
   height: 640
 
+  property variant gpsLocation
   property variant carPosition: QtPositioning.coordinate()
   property real carBearing: 0
   property bool nightMode: mapPlugin.name != "osm"
@@ -56,6 +57,19 @@ Item {
     name: "mapbox"
     // routing requires valid access_token
     PluginParameter { name: "mapbox.access_token"; value: mapboxAccessToken }
+    PluginParameter { name: "mapbox.useragent"; value: "openpilot" }
+    PluginParameter { name: "mapbox.routing.traffic_side"; value: isRHD ? "right" : "left" }
+  }
+
+  onGpsLocationChanged: {
+    // console.log(JSON.stringify(gpsLocation))
+    if (gpsLocation.accuracy < 1000) {
+      carPosition = QtPositioning.coordinate(gpsLocation.latitude, gpsLocation.longitude, gpsLocation.altitude)
+    }
+
+    if (gpsLocation.bearingAccuracyDeg < 50) {
+      carBearing = gpsLocation.bearingDeg
+    }
   }
 
   onCarPositionChanged: {
@@ -167,7 +181,7 @@ Item {
 
       sourceItem: Image {
         id: icon
-        source: "arrow-" + (app.nightMode ? "night" : "day") + ".svg"
+        source: `arrow-${nightMode ? "night" : "day"}.svg`
         width: 60 / map.scale
         height: 60 / map.scale
       }
@@ -181,7 +195,7 @@ Item {
 
     MouseArea {
       id: compass
-      // visible: !lockedToNorth && !mapFollowsCar // TODO
+      visible: mapFollowsCar || !lockedToNorth
       width: 125
       height: 113
       onClicked: {
@@ -219,7 +233,7 @@ Item {
       }
       // Rectangle { anchors.fill: parent; color: 'transparent'; border.color: 'yellow'; border.width: 1; } // DEBUG
       Image {
-        source: mapFollowsCar && carPosition.isValid ? "location-active.png" : "location.png"
+        source: mapFollowsCar && carPosition.isValid ? "location-active.png" : `location-${nightMode ? "night" : "day"}.png`
         opacity: mapFollowsCar && carPosition.isValid ? 0.5 : 1.0
         width: 63
         height: 63
@@ -245,25 +259,36 @@ Item {
     text: "Directions might go here"
   }
 
-  RouteQuery {
-    id: routeQuery
-  }
-
   function updateRoute() {
     console.log("Updating route")
     routeQuery.clearWaypoints();
     routeQuery.addWaypoint(spartanburg.coordinate);
     routeQuery.addWaypoint(raleigh.coordinate);
+    routeQuery.travelModes = RouteQuery.CarTravel
+    routeQuery.routeOptimizations = RouteQuery.FastestRoute
+    routeQuery.setFeatureWeight(RouteQuery.TrafficFeature, RouteQuery.AvoidFeatureWeight)
     routeModel.update()
   }
 
   RouteModel {
     id: routeModel
     plugin: routePlugin
-    query: routeQuery
+    query: RouteQuery {
+      id: routeQuery
+    }
 
     Component.onCompleted: {
       updateRoute()
+      console.log("====================================================")
+      console.log(JSON.stringify(spartanburg.coordinate))
+      console.log(JSON.stringify(coordinateToPoint(spartanburg.coordinate)))
+      for (var i in CheapRuler){
+        console.log(i, CheapRuler[i])
+      }
+      console.log("units",JSON.stringify(CheapRuler.units()))
+      console.log("distance",JSON.stringify(ruler.distance(coordinateToPoint(spartanburg.coordinate), coordinateToPoint(raleigh.coordinate))))
+      console.log("isRHD", isRHD)
+      console.log("====================================================")
     }
   }
 }

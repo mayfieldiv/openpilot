@@ -1,5 +1,6 @@
 #include <cassert>
 
+#include <QDateTime>
 #include <QGeoCoordinate>
 #include <QQmlContext>
 #include <QQmlProperty>
@@ -8,6 +9,7 @@
 #include <QStackedLayout>
 #include <QVariant>
 
+#include "common/params.h"
 #include "common/util.h"
 #include "map.hpp"
 // #include "mapManager.hpp"
@@ -29,6 +31,7 @@ QtMap::QtMap(QWidget *parent) : QFrame(parent) {
   // might have to use QQuickWidget for proper stacking?
   QQuickWidget *map = new QQuickWidget();
   map->rootContext()->setContextProperty("mapboxAccessToken", mapboxAccessToken);
+  map->rootContext()->setContextProperty("isRHD", Params().getBool("IsRHD"));
   map->setSource(QUrl::fromLocalFile("qt/widgets/map.qml"));
   mapObject = map->rootObject();
   QSize size = map->size();
@@ -54,6 +57,21 @@ QtMap::QtMap(QWidget *parent) : QFrame(parent) {
   layout->addWidget(map);
   setLayout(layout);
 
+  // TODO retrieve from persistent storage
+  QVariantMap previousGpsLocation;
+  previousGpsLocation["latitude"] = 35.7796662;
+  previousGpsLocation["longitude"] = -78.6386822;
+  previousGpsLocation["altitude"] = 0.0;
+  previousGpsLocation["speed"] = 0.0;
+  previousGpsLocation["bearingDeg"] = 270.0;
+  previousGpsLocation["accuracy"] = 0.0;
+  previousGpsLocation["timestamp"] = 0;
+  previousGpsLocation["verticalAccuracy"] = 0.0;
+  previousGpsLocation["bearingAccuracyDeg"] = 0.0;
+  previousGpsLocation["speedAccuracy"] = 0.0;
+
+  QQmlProperty::write(mapObject, "gpsLocation", QVariant::fromValue(previousGpsLocation));
+
   // Start polling loop
   sm = new SubMaster({"gpsLocationExternal"});
   timer.start(100, this); // 10Hz
@@ -77,10 +95,22 @@ void QtMap::updatePosition() {
   sm->update(0);
   if (sm->updated("gpsLocationExternal")) {
     cereal::GpsLocationData::Reader gps = (*sm)["gpsLocationExternal"].getGpsLocationExternal();
-    float bearing = gps.getBearingDeg();
-    QGeoCoordinate position = gps.getAccuracy() > 1000 ? QGeoCoordinate() : QGeoCoordinate(gps.getLatitude(), gps.getLongitude(), gps.getAltitude());
-    QQmlProperty::write(mapObject, "carPosition", QVariant::fromValue(position));
-    QQmlProperty::write(mapObject, "carBearing", bearing);
+
+    QVariantMap gpsLocation;
+    gpsLocation["latitude"] = gps.getLatitude();
+    gpsLocation["longitude"] = gps.getLongitude();
+    gpsLocation["altitude"] = gps.getAltitude();
+    gpsLocation["speed"] = gps.getSpeed();
+    gpsLocation["bearingDeg"] = gps.getBearingDeg();
+    gpsLocation["accuracy"] = gps.getAccuracy();
+    QDateTime timestamp;
+    timestamp.setMSecsSinceEpoch(gps.getTimestamp());
+    gpsLocation["timestamp"] = timestamp;
+    gpsLocation["verticalAccuracy"] = gps.getVerticalAccuracy();
+    gpsLocation["bearingAccuracyDeg"] = gps.getBearingAccuracyDeg();
+    gpsLocation["speedAccuracy"] = gps.getSpeedAccuracy();
+
+    QQmlProperty::write(mapObject, "gpsLocation", QVariant::fromValue(gpsLocation));
   }
   // qDebug()
   //  << "Bearing:" << QQmlProperty::read(mapObject, "carBearing").toFloat()
