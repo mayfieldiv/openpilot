@@ -7,11 +7,18 @@
   - [ ] mouse ctrl/shift rotation/tilt
   - [ ] satellite on/off
   - [ ] followMe zoom level based on speed
+  - [ ] device compass as fallback to gps bearing - sensorEvents / magnetic(Uncalibrated)
+  - [ ] UI components outside of map - more integrated into normal UI
 - [ ] navigation
-  - [ ] directions route on map
-  - [ ] detect going off-route -> recalculate
+  - [x] directions route on map
+  - [x] detect going off-route -> recalculate
+  - [ ] alternative routes
+  - [ ] turn-by-turn vs. map mode
+  - [ ] direction icons
+  - [ ] highway/interstate icons
+  - [ ] directly query mapbox apis instead of RouteQuery
   - [ ] nav rtc between comma connect and openpilot - athena messages
 - [ ] lane lines
-  - [ ] draw lane lines on satellite view
+  - [ ] draw lane lines on satellite view (mostly for fun)
   - [ ] mapbox directions lane info?
   - [ ] indicate desired lane(s)

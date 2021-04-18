@@ -8,8 +8,12 @@ Item {
   width: 640
   height: 640
 
+  property bool initialized: false
   property variant gpsLocation
   property variant carPosition: QtPositioning.coordinate()
+  property variant routeStart: QtPositioning.coordinate()
+  property variant routeDestination: QtPositioning.coordinate()
+  property real recalculationThreshold: 0.05 // 50 meters
   property real carBearing: 0
   property bool nightMode: mapPlugin.name != "osm"
   property bool satelliteMode: false
@@ -61,6 +65,12 @@ Item {
     PluginParameter { name: "mapbox.routing.traffic_side"; value: isRHD ? "right" : "left" }
   }
 
+  function initializeIfReady() {
+    if (gpsLocation.accuracy < 1000) {
+      initialized = true
+    }
+  }
+
   onGpsLocationChanged: {
     // console.log(JSON.stringify(gpsLocation))
     if (gpsLocation.accuracy < 1000) {
@@ -70,6 +80,9 @@ Item {
     if (gpsLocation.bearingAccuracyDeg < 50) {
       carBearing = gpsLocation.bearingDeg
     }
+
+    initializeIfReady()
+    updateRouteProgress()
   }
 
   onCarPositionChanged: {
@@ -199,6 +212,7 @@ Item {
       width: 125
       height: 113
       onClicked: {
+        updateRouteProgress()
         lockedToNorth = !lockedToNorth
         map.bearing = lockedToNorth || !mapFollowsCar ? 0 : carBearing
       }
@@ -251,23 +265,40 @@ Item {
     anchors.top: parent.top
     anchors.horizontalCenter: parent.horizontalCenter
     anchors.margins: 20
+    width: parent.width
 
     font.family: "Inter"
     font.pixelSize: 40
     color: nightMode ? "white" : "black"
-
-    text: "Directions might go here"
+    wrapMode: Text.WordWrap
+    horizontalAlignment: Text.AlignHCenter
   }
 
-  function updateRoute() {
+  function updateRoute(start, destination) {
     console.log("Updating route")
+    if (start) routeStart = start
+    if (destination) routeDestination = destination
+
+    console.log("Start", routeStart)
+    console.log("Destination", routeDestination)
+    if (!routeStart.isValid || !routeDestination.isValid)
+      return
+
     routeQuery.clearWaypoints();
-    routeQuery.addWaypoint(spartanburg.coordinate);
-    routeQuery.addWaypoint(raleigh.coordinate);
+    routeQuery.addWaypoint(carPosition);
+    routeQuery.addWaypoint(routeDestination);
     routeQuery.travelModes = RouteQuery.CarTravel
     routeQuery.routeOptimizations = RouteQuery.FastestRoute
     routeQuery.setFeatureWeight(RouteQuery.TrafficFeature, RouteQuery.AvoidFeatureWeight)
     routeModel.update()
+  }
+
+  function clearRoute() {
+      console.log("Clearing route")
+      routeStart = QtPositioning.coordinate()
+      routeDestination = QtPositioning.coordinate()
+      routeQuery.clearWaypoints();
+      routeModel.reset();
   }
 
   RouteModel {
@@ -278,17 +309,78 @@ Item {
     }
 
     Component.onCompleted: {
-      updateRoute()
-      console.log("====================================================")
-      console.log(JSON.stringify(spartanburg.coordinate))
-      console.log(JSON.stringify(coordinateToPoint(spartanburg.coordinate)))
-      for (var i in CheapRuler){
-        console.log(i, CheapRuler[i])
+      updateRoute(spartanburg.coordinate, raleigh.coordinate)
+    }
+
+    onErrorChanged: {
+      console.log("RouteModel error: " + errorString)
+    }
+
+    onStatusChanged: {
+      console.log("RouteModel status: " + ["Null", "Ready", "Loading", "Error"][status])
+      // return
+
+      var route = routeModel.get(0)
+      for (var i in route){
+        console.log("route", i, route[i])
       }
-      console.log("units",JSON.stringify(CheapRuler.units()))
-      console.log("distance",JSON.stringify(ruler.distance(coordinateToPoint(spartanburg.coordinate), coordinateToPoint(raleigh.coordinate))))
-      console.log("isRHD", isRHD)
-      console.log("====================================================")
+      for (var i in route.legs){
+        for (var j in route.legs[i]){
+          console.log("leg", i, j, route.legs[i][j])
+        }
+      }
+      for (var i in route.segments){
+        var segment = route.segments[i]
+        for (var j in segment){
+          console.log("segment", i, j, segment[j])
+        }
+        console.log("segment", i, "maneuver", JSON.stringify(segment.maneuver, null, 2))
+      }
+    }
+  }
+
+  function recalculate() {
+    updateRoute(carPosition)
+  }
+
+  function updateRouteProgress() {
+    if (routeModel.status !== RouteModel.Ready || routeModel.count !== 1) {
+      console.log("route not ready")
+      if (routeModel.status !== RouteModel.Loading) {
+        updateRoute(carPosition)
+      }
+      return
+    }
+
+    var route = routeModel.get(0)
+    if (route.segments.count === 0) {
+      console.log("route contains no segments")
+      return
+    }
+
+    // TODO optimization: don't look at every segment unless about to recalculate
+    var match = { distance: Infinity }
+    for (var i in route.segments) {
+      var segment = route.segments[i]
+      var current = coordinateToPoint(carPosition)
+      var path = segment.path.map(coordinateToPoint)
+      var best = ruler.pointOnLine(path, current)
+      var point = best.point
+      var distance = ruler.distance(current, point)
+      if (distance < match.distance) {
+        match = { segment, distance, point }
+      }
+    }
+
+    instructions.text = `\
+${(match.distance * CheapRuler.units().meters).toFixed(1)}m off-course
+${match.segment.maneuver.instructionText}
+`
+    // console.log(`distance: ${match.distance} | point: ${match.point}`)
+    // console.log(JSON.stringify(match.segment.maneuver, null, 2))
+
+    if (match.distance > recalculationThreshold) {
+      recalculate()
     }
   }
 }
