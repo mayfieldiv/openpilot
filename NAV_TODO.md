@@ -17,7 +17,10 @@
   - [ ] direction icons
   - [ ] highway/interstate icons
   - [ ] directly query mapbox apis instead of RouteQuery
+    - [ ] retrieve maxspeed
+    - [ ] narrow query by providing starting bearing
   - [ ] nav rtc between comma connect and openpilot - athena messages
+  - [ ] instructions icons - https://api.mapbox.com/styles/v1/mapbox/streets-v11/sprite@3x.png?access_token=...
 - [ ] lane lines
   - [ ] draw lane lines on satellite view (mostly for fun)
   - [ ] mapbox directions lane info?

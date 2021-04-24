@@ -13,13 +13,14 @@ Item {
   property variant carPosition: QtPositioning.coordinate()
   property variant routeStart: QtPositioning.coordinate()
   property variant routeDestination: QtPositioning.coordinate()
-  property real recalculationThreshold: 0.05 // 50 meters
+  property variant lastRecalculationPosition: QtPositioning.coordinate()
+  property real recalculationThreshold: 50 // meters
   property real carBearing: 0
   property bool nightMode: mapPlugin.name != "osm"
   property bool satelliteMode: false
   property bool mapFollowsCar: true
   property bool lockedToNorth: false
-  property variant ruler: CheapRuler.cheapRuler(raleigh.coordinate.latitude)
+  property variant ruler: CheapRuler.cheapRuler(raleigh.coordinate.latitude, "meters")
 
   Location {
     id: spartanburg
@@ -29,6 +30,11 @@ Item {
   Location {
     id: raleigh
     coordinate: QtPositioning.coordinate(35.7796662, -78.6386822)
+  }
+
+  Location {
+    id: dostaquitos
+    coordinate: QtPositioning.coordinate(35.8549825,-78.7021428)
   }
 
   function coordinateToPoint(coordinate) {
@@ -65,6 +71,7 @@ Item {
     PluginParameter { name: "mapbox.routing.traffic_side"; value: isRHD ? "right" : "left" }
   }
 
+  // TODO figure out coordinating things starting up
   function initializeIfReady() {
     if (gpsLocation.accuracy < 1000) {
       initialized = true
@@ -82,7 +89,9 @@ Item {
     }
 
     initializeIfReady()
-    updateRouteProgress()
+    if (initialized) {
+      updateRouteProgress()
+    }
   }
 
   onCarPositionChanged: {
@@ -285,7 +294,7 @@ Item {
       return
 
     routeQuery.clearWaypoints();
-    routeQuery.addWaypoint(carPosition);
+    routeQuery.addWaypoint(routeStart);
     routeQuery.addWaypoint(routeDestination);
     routeQuery.travelModes = RouteQuery.CarTravel
     routeQuery.routeOptimizations = RouteQuery.FastestRoute
@@ -309,7 +318,7 @@ Item {
     }
 
     Component.onCompleted: {
-      updateRoute(spartanburg.coordinate, raleigh.coordinate)
+      updateRoute(raleigh.coordinate, dostaquitos.coordinate)
     }
 
     onErrorChanged: {
@@ -318,9 +327,18 @@ Item {
 
     onStatusChanged: {
       console.log("RouteModel status: " + ["Null", "Ready", "Loading", "Error"][status])
-      // return
+
+      var dumpRoute = false
+      if (!dumpRoute)
+        return
+
+      if (!routeModel.count)
+        return
 
       var route = routeModel.get(0)
+      if (!route)
+        return
+
       for (var i in route){
         console.log("route", i, route[i])
       }
@@ -339,15 +357,11 @@ Item {
     }
   }
 
-  function recalculate() {
-    updateRoute(carPosition)
-  }
-
   function updateRouteProgress() {
     if (routeModel.status !== RouteModel.Ready || routeModel.count !== 1) {
       console.log("route not ready")
       if (routeModel.status !== RouteModel.Loading) {
-        updateRoute(carPosition)
+        updateRoute()
       }
       return
     }
@@ -358,29 +372,62 @@ Item {
       return
     }
 
+    // console.log("Updating route progress")
+
     // TODO optimization: don't look at every segment unless about to recalculate
     var match = { distance: Infinity }
-    for (var i in route.segments) {
+    var current = coordinateToPoint(carPosition)
+    for (var i = 0; i < route.segments.length; i++) {
       var segment = route.segments[i]
-      var current = coordinateToPoint(carPosition)
-      var path = segment.path.map(coordinateToPoint)
-      var best = ruler.pointOnLine(path, current)
-      var point = best.point
-      var distance = ruler.distance(current, point)
-      if (distance < match.distance) {
-        match = { segment, distance, point }
+      var segmentPath = segment.path.map(coordinateToPoint)
+      var bannerInstructions = segment.maneuver.extendedAttributes["mapbox.banner_instructions"]
+      for (var j = 0; j < bannerInstructions.length; j++) {
+        var subSegment = bannerInstructions[j]
+        var nextSubSegment = bannerInstructions[j+1]
+        var subSegmentDistance = segment.distance - subSegment["distance_along_geometry"]
+        var nextSubSegmentDistance = nextSubSegment ? segment.distance - nextSubSegment["distance_along_geometry"] : Infinity
+        var subSegmentPath = ruler.lineSliceAlong(subSegmentDistance, nextSubSegmentDistance, segmentPath)
+
+        var best = ruler.pointOnLine(subSegmentPath, current)
+        var point = best.point
+        var distance = ruler.distance(current, point)
+        if (distance < match.distance) {
+          match = { segment, subSegment, distance, point }
+        }
+
+        // console.log(i, j, distance, subSegment.primary.text, subSegmentDistance, nextSubSegmentDistance, segmentPath.length, subSegmentPath.length)
       }
     }
 
     instructions.text = `\
-${(match.distance * CheapRuler.units().meters).toFixed(1)}m off-course
+${(match.distance).toFixed(1)}m off-course
 ${match.segment.maneuver.instructionText}
+${match.segment.maneuver.extendedAttributes.type} ${match.segment.maneuver.extendedAttributes.modifier || ""}
+${match.subSegment.primary.text}
+${match.subSegment.secondary ? match.subSegment.secondary.text : undefined}
 `
     // console.log(`distance: ${match.distance} | point: ${match.point}`)
     // console.log(JSON.stringify(match.segment.maneuver, null, 2))
 
-    if (match.distance > recalculationThreshold) {
-      recalculate()
+    recalculateIfNeeded(match)
+  }
+
+  function recalculateIfNeeded(match) {
+    // TODO more sophisticated checks
+    // TODO going wrong way on correct road can be detected by slicing route path based on previous position match
+    if (match.distance < recalculationThreshold) {
+      return
     }
+
+    // TODO split out threshold / change logic?
+    // TODO use map matching to determine "Proceed to highlighted route"?
+    // prevent continuous recalculation if car hasn't moved much since last recalculation
+    if (lastRecalculationPosition.isValid && ruler.distance(coordinateToPoint(carPosition), coordinateToPoint(lastRecalculationPosition)) < recalculationThreshold) {
+      return
+    }
+
+    console.log("RECALCULATING...")
+    lastRecalculationPosition = carPosition
+    updateRoute(carPosition)
   }
 }
