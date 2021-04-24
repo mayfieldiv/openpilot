@@ -375,38 +375,55 @@ Item {
     // console.log("Updating route progress")
 
     // TODO optimization: don't look at every segment unless about to recalculate
-    var match = { distance: Infinity }
+    var match = { nearestPointDistance: Infinity }
     var current = coordinateToPoint(carPosition)
     for (var i = 0; i < route.segments.length; i++) {
       var segment = route.segments[i]
+      var nextSegment = route.segments[i+1]
       var segmentPath = segment.path.map(coordinateToPoint)
       var bannerInstructions = segment.maneuver.extendedAttributes["mapbox.banner_instructions"]
       for (var j = 0; j < bannerInstructions.length; j++) {
-        var subSegment = bannerInstructions[j]
-        var nextSubSegment = bannerInstructions[j+1]
-        var subSegmentDistance = segment.distance - subSegment["distance_along_geometry"]
-        var nextSubSegmentDistance = nextSubSegment ? segment.distance - nextSubSegment["distance_along_geometry"] : Infinity
-        var subSegmentPath = ruler.lineSliceAlong(subSegmentDistance, nextSubSegmentDistance, segmentPath)
+        var banner = bannerInstructions[j]
+        var nextBanner = bannerInstructions[j+1]
+        var bannerDistanceFromSegmentStart = segment.distance - banner["distance_along_geometry"]
+        var nextBannerDistanceFromSegmentStart = nextBanner ? segment.distance - nextBanner["distance_along_geometry"] : Infinity
+        var bannerPath = ruler.lineSliceAlong(bannerDistanceFromSegmentStart, nextBannerDistanceFromSegmentStart, segmentPath)
 
-        var best = ruler.pointOnLine(subSegmentPath, current)
-        var point = best.point
-        var distance = ruler.distance(current, point)
-        if (distance < match.distance) {
-          match = { segment, subSegment, distance, point }
+        var nearest = ruler.pointOnLine(bannerPath, current)
+        var nearestPoint = nearest.point
+        var nearestPointDistance = ruler.distance(current, nearestPoint)
+
+        if (nearestPointDistance < match.nearestPointDistance) {
+          match = { segment, nextSegment, segmentPath, banner, nearestPoint, nearestPointDistance }
         }
 
-        // console.log(i, j, distance, subSegment.primary.text, subSegmentDistance, nextSubSegmentDistance, segmentPath.length, subSegmentPath.length)
+        // console.log(i, j, nearestPointDistance, banner.primary.text, bannerDistanceFromSegmentStart, nextBannerDistanceFromSegmentStart, segmentPath.length, bannerPath.length)
       }
     }
 
+    // console.log(match.segment)
+    // console.log(match.segmentPath)
+    // console.log(match.banner)
+    // console.log(match.nearestPoint)
+    // console.log(match.nearestPointDistance)
+    var lastSegmentPoint = match.segmentPath[match.segmentPath.length - 1]
+    // console.log("lastSegmentPoint", lastSegmentPoint)
+    var remainingSegmentPath = ruler.lineSlice(match.nearestPoint, lastSegmentPoint, match.segmentPath)
+    // console.log("remainingSegmentPath", remainingSegmentPath)
+    var distanceToNextInstruction = ruler.lineDistance(remainingSegmentPath)
+    // console.log("distanceToNextInstruction", distanceToNextInstruction)
+
     instructions.text = `\
-${(match.distance).toFixed(1)}m off-course
-${match.segment.maneuver.instructionText}
-${match.segment.maneuver.extendedAttributes.type} ${match.segment.maneuver.extendedAttributes.modifier || ""}
-${match.subSegment.primary.text}
-${match.subSegment.secondary ? match.subSegment.secondary.text : undefined}
+In ${distanceToNextInstruction.toFixed(0)}m, ${match.banner.primary.type} ${match.banner.primary.modifier.toUpperCase()}${match.banner.secondary ? `(${match.banner.secondary.text})` : ""}
+"${match.banner.primary.text}"
 `
-    // console.log(`distance: ${match.distance} | point: ${match.point}`)
+// ${match.nextSegment.maneuver.instructionText}
+// ${match.nextSegment.maneuver.extendedAttributes.type || ""} ${match.nextSegment.maneuver.extendedAttributes.modifier || ""}
++ `
+${(match.nearestPointDistance).toFixed(1)}m off-course
+`
+
+    // console.log(`distance: ${match.nearestPointDistance} | point: ${match.nearestPoint}`)
     // console.log(JSON.stringify(match.segment.maneuver, null, 2))
 
     recalculateIfNeeded(match)
@@ -415,7 +432,7 @@ ${match.subSegment.secondary ? match.subSegment.secondary.text : undefined}
   function recalculateIfNeeded(match) {
     // TODO more sophisticated checks
     // TODO going wrong way on correct road can be detected by slicing route path based on previous position match
-    if (match.distance < recalculationThreshold) {
+    if (match.nearestPointDistance < recalculationThreshold) {
       return
     }
 
