@@ -163,8 +163,9 @@ void MapPanel::parseResponse(const QString &response) {
         layout->addWidget(star);
         layout->addSpacing(10);
 
-
-        QLabel *recent_label = new QLabel(shorten(name + " " + details, 45));
+        QLabel *recent_label = new QLabel();
+        QFontMetrics *fm = new QFontMetrics(recent_label->font()); // font isn't actually accurate here because we use stylesheets
+        recent_label->setText(fm->elidedText(name + " " + details, Qt::ElideRight, 540));
         recent_label->setStyleSheet(R"(font-size: 50px;)");
 
         layout->addWidget(recent_label);
